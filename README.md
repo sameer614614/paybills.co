@@ -131,6 +131,10 @@ Every package ships with an `.env.example` template – copy it to `.env` (or `.
 
 Run `npm run build` in each package to produce production assets (`backend` compiles TypeScript while the React apps emit static bundles). Deploy the admin and agent builds only to infrastructure that sits behind your approved hostnames.
 
+### Build verification helper
+
+To ensure `npm run build` succeeds everywhere (and to surface any missing files), run `scripts/verify-builds.sh` from the repository root. The script installs dependencies and invokes the production build in `backend/`, `frontend/`, `admin/`, and `agent/`, halting immediately if any step fails.
+
 ### Updating an existing deployment
 
 When you pull new changes onto the GoDaddy VPS, follow this repeatable sequence to keep the API, database schema, and front end in sync:
