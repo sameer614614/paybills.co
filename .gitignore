@@ -32,3 +32,4 @@ agent/.env
 *.njsproj
 *.sln
 *.sw?
+.github/
