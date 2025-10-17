@@ -1,0 +1,122 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String           @id @default(cuid())
+  email             String           @unique
+  passwordHash      String
+  firstName         String
+  lastName          String
+  customerNumber    String           @unique
+  dateOfBirth       DateTime
+  ssnLast4          String           @db.VarChar(4)
+  phone             String?
+  addressLine1      String
+  addressLine2      String?
+  city              String
+  state             String
+  postalCode        String
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  paymentMethods    PaymentMethod[]
+  billers           Biller[]
+  receipts          Receipt[]
+  agentAssignments  AgentCustomerAssignment[]
+}
+
+model PaymentMethod {
+  id             String   @id @default(cuid())
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId         String
+  type           PaymentMethodType
+  provider       String
+  accountNumber  String
+  cardholderName String?
+  nickname       String?
+  expMonth       Int?
+  expYear        Int?
+  brand          String?
+  last4          String
+  securityCode   String?
+  billingAddressLine1 String?
+  billingAddressLine2 String?
+  billingCity    String?
+  billingState   String?
+  billingPostalCode String?
+  isDefault      Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+enum PaymentMethodType {
+  CREDIT_CARD
+  DEBIT_CARD
+  BANK_ACCOUNT
+}
+
+model Biller {
+  id          String     @id @default(cuid())
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  name        String
+  category    BillerCategory
+  accountId   String
+  contactInfo String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  receipts    Receipt[]
+}
+
+enum BillerCategory {
+  INTERNET
+  TV
+  ELECTRIC
+  MOBILE
+  HOME
+  INSURANCE
+  OTHER
+}
+
+model Receipt {
+  id            String   @id @default(cuid())
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId        String
+  biller        Biller   @relation(fields: [billerId], references: [id], onDelete: Cascade)
+  billerId      String
+  amount        Decimal  @db.Decimal(10, 2)
+  paidOn        DateTime
+  confirmation  String
+  downloadUrl   String?
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Agent {
+  id           String                     @id @default(cuid())
+  username     String                     @unique
+  passwordHash String
+  fullName     String
+  email        String?
+  phone        String?
+  createdAt    DateTime                   @default(now())
+  updatedAt    DateTime                   @updatedAt
+  customers    AgentCustomerAssignment[]
+}
+
+model AgentCustomerAssignment {
+  agentId    String
+  userId     String
+  assignedAt DateTime @default(now())
+
+  agent Agent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([agentId, userId])
+}
