@@ -1,32 +1,51 @@
 name: AutoMerge Codex Pull Requests
+
 on:
   pull_request:
-    types: [opened, synchronize, reopened]
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
+    branches:
+      - main
+  workflow_dispatch:
+  schedule:
+    - cron: "*/5 * * * *" # every 5 minutes
+
+permissions:
+  contents: write
+  pull-requests: write
 
 jobs:
   automerge:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
-
     steps:
-      - name: Check out repository
+      - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Set up Git user
+      - name: Setup Git identity
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "sameer614614"
+          git config --global user.email "sameer614614@gmail.com"
 
-      - name: Fetch all branches
-        run: git fetch --all
-
-      - name: Merge Codex PR into main (prefer Codex changes)
+      - name: Enable auto-merge for Codex PRs
         run: |
-          TARGET_BRANCH="main"
-          SOURCE_BRANCH="${{ github.head_ref }}"
-          echo "Merging $SOURCE_BRANCH → $TARGET_BRANCH preferring Codex changes..."
-          git checkout $TARGET_BRANCH
-          git merge -X theirs origin/$SOURCE_BRANCH -m "Auto merge Codex PR preferring Codex changes"
-          git push origin $TARGET_BRANCH
+          echo "🔁 Checking for Codex PRs to auto-merge..."
+          gh pr list --state open --json number,title,headRefName,author \
+            --jq '.[] | select(.author.login=="codex") | .number' | while read pr; do
+              echo "✅ Auto-merging PR #$pr"
+              gh pr merge $pr --squash --admin --delete-branch
+            done
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Auto-sync main branch
+        run: |
+          git fetch origin main
+          git pull origin main
+          git push origin main
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
