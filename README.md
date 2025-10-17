@@ -18,7 +18,7 @@ for password reset email, plus address, last 4 of ssn
 also generate unique customer for each customer
 
 we wil do hosting and backend on godaddy vps
-with current domain: paybillswithus.com 
+with current domain: paybills.co 
 i have already vps pruchased form godaddy
 
 make admin panel secure, so public not get it running subdomain or other tools
@@ -135,7 +135,7 @@ Run `npm run build` in each package to produce production assets (`backend` comp
 
 When you pull new changes onto the GoDaddy VPS, follow this repeatable sequence to keep the API, database schema, and front end in sync:
 
-1. SSH into the VPS and switch to the project directory (for example, `/var/www/paybillswithus.com`).
+1. SSH into the VPS and switch to the project directory (for example, `/var/www/paybills.co`).
 2. Pull the latest code from Git (`git pull origin main` or the branch you deploy from).
 3. Install/refresh dependencies:
    * `cd backend && npm install`
