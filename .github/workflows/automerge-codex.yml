@@ -2,8 +2,16 @@ name: AutoMerge Codex Pull Requests
 
 on:
   pull_request:
-    branches: [ main ]
-    types: [opened, synchronize, reopened, ready_for_review]
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
+    branches:
+      - main
+  workflow_dispatch:
+  schedule:
+    - cron: "*/5 * * * *" # every 5 minutes
 
 permissions:
   contents: write
@@ -13,39 +21,31 @@ jobs:
   automerge:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Auto-resolve simple conflicts (README, docs, markdown)
+      - name: Setup Git identity
         run: |
-          git config user.name "GitHub Actions"
-          git config user.email "actions@github.com"
+          git config --global user.name "sameer614614"
+          git config --global user.email "sameer614614@gmail.com"
 
-          # Stash Codex version of docs if present
-          for file in $(git diff --name-only --diff-filter=U || true); do
-            if [[ $file == *.md || $file == docs/* ]]; then
-              echo "Resolving markdown/doc conflict in $file by preferring Codex version"
-              git checkout --theirs "$file"
-              git add "$file"
-            fi
-          done
-
-      - name: Commit auto-resolved conflicts
+      - name: Enable auto-merge for Codex PRs
         run: |
-          if ! git diff --cached --quiet; then
-            git commit -m "🤖 Auto-resolved Codex doc conflicts"
-          fi
+          echo "🔁 Checking for Codex PRs to auto-merge..."
+          gh pr list --state open --json number,title,headRefName,author \
+            --jq '.[] | select(.author.login=="codex") | .number' | while read pr; do
+              echo "✅ Auto-merging PR #$pr"
+              gh pr merge $pr --squash --admin --delete-branch
+            done
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Merge Codex PR automatically
-        uses: pascalgn/automerge-action@v0.16.3
+      - name: Auto-sync main branch
+        run: |
+          git fetch origin main
+          git pull origin main
+          git push origin main
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          MERGE_METHOD: squash
-          MERGE_DELETE_BRANCH: true
-          MERGE_RETRIES: 6
-          MERGE_RETRY_SLEEP: 10000
-          MERGE_FILTER_AUTHOR: "sameer614614"
-          MERGE_COMMIT_MESSAGE: "🤖 Auto-merged latest code updates from Codex"
-
