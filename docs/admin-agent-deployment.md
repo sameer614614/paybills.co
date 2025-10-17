@@ -6,8 +6,8 @@ This document walks through the exact steps required to expose the admin and age
 
 * A GoDaddy VPS (Ubuntu 20.04+ is assumed here).
 * SSH access to the VPS as a sudo-capable user.
-* The project repository checked out on the server (for example `/var/www/paybillswithus.com`).
-* An HTTPS certificate for each private subdomain (`admin.paybillswithus.com` and `agent.paybillswithus.com`). You can generate these with Let's Encrypt once DNS is in place.
+* The project repository checked out on the server (for example `/var/www/paybills.co`).
+* An HTTPS certificate for each private subdomain (`admin.paybills.co` and `agent.paybills.co`). You can generate these with Let's Encrypt once DNS is in place.
 
 ## 2. DNS configuration
 
@@ -17,15 +17,15 @@ This document walks through the exact steps required to expose the admin and age
    * **Host:** `agent` – **Points to:** the same VPS IP.
 3. Allow DNS to propagate (this can take a few minutes). You can confirm from your laptop with:
    ```bash
-   dig +short admin.paybillswithus.com
-   dig +short agent.paybillswithus.com
+   dig +short admin.paybills.co
+   dig +short agent.paybills.co
    ```
 
 ## 3. Build the applications
 
 On the VPS, prepare fresh production bundles:
 ```bash
-cd /var/www/paybillswithus.com
+cd /var/www/paybills.co
 npm install --prefix backend
 npm install --prefix frontend
 npm install --prefix admin
@@ -39,10 +39,10 @@ The admin build will live in `admin/dist`, and the agent build in `agent/dist`.
 
 ## 4. Lock down API access by host
 
-Edit `/var/www/paybillswithus.com/backend/.env` so the allowed host names match the DNS records you created:
+Edit `/var/www/paybills.co/backend/.env` so the allowed host names match the DNS records you created:
 ```env
-ADMIN_ALLOWED_HOSTS=admin.paybillswithus.com
-AGENT_ALLOWED_HOSTS=agent.paybillswithus.com
+ADMIN_ALLOWED_HOSTS=admin.paybills.co
+AGENT_ALLOWED_HOSTS=agent.paybills.co
 ```
 Restart the API service (`pm2 restart paybills-api`, `systemctl restart paybills-backend`, or the process manager you use). The middleware in `backend/src/middleware/requireApprovedHost.ts` will now reject requests that do not present these host headers.
 
@@ -53,17 +53,17 @@ Install Nginx if it is not already available:
 sudo apt update && sudo apt install nginx
 ```
 
-Create a server block for the admin console at `/etc/nginx/sites-available/admin.paybillswithus.com`:
+Create a server block for the admin console at `/etc/nginx/sites-available/admin.paybills.co`:
 ```nginx
 server {
     listen 80;
-    server_name admin.paybillswithus.com;
+    server_name admin.paybills.co;
 
     # Optional: restrict to a trusted CIDR range (replace with your office IP block)
     allow 203.0.113.0/24;
     deny all;
 
-    root /var/www/paybillswithus.com/admin/dist;
+    root /var/www/paybills.co/admin/dist;
     index index.html;
 
     location / {
@@ -84,12 +84,12 @@ Repeat for the agent console, adjusting the hostname, CIDR allow list, and root 
 ```nginx
 server {
     listen 80;
-    server_name agent.paybillswithus.com;
+    server_name agent.paybills.co;
 
     allow 203.0.113.0/24; # replace with agent network range
     deny all;
 
-    root /var/www/paybillswithus.com/agent/dist;
+    root /var/www/paybills.co/agent/dist;
     index index.html;
 
     location / {
@@ -108,8 +108,8 @@ server {
 
 Enable the sites and reload Nginx:
 ```bash
-sudo ln -s /etc/nginx/sites-available/admin.paybillswithus.com /etc/nginx/sites-enabled/
-sudo ln -s /etc/nginx/sites-available/agent.paybillswithus.com /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/admin.paybills.co /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/agent.paybills.co /etc/nginx/sites-enabled/
 sudo nginx -t
 sudo systemctl reload nginx
 ```
@@ -121,18 +121,18 @@ At this point the Vite bundles are available on the desired hostnames, but only 
 Use Certbot to obtain certificates and redirect HTTP to HTTPS:
 ```bash
 sudo apt install python3-certbot-nginx
-sudo certbot --nginx -d admin.paybillswithus.com -d agent.paybillswithus.com
+sudo certbot --nginx -d admin.paybills.co -d agent.paybills.co
 ```
 Certbot will rewrite the server blocks so that TLS is enforced.
 
 ## 7. Admin sign-in and agent provisioning
 
-* Browse to `https://admin.paybillswithus.com` from an allowed IP.
+* Browse to `https://admin.paybills.co` from an allowed IP.
 * Log in with the hard-coded owner credentials:
   * **Username:** `sameer614614`
   * **Password:** `Cake@1245`
 * Use the “Agents” section to create agent accounts (username/password pairs).
-* Agents can then authenticate at `https://agent.paybillswithus.com` using the credentials you assign.
+* Agents can then authenticate at `https://agent.paybills.co` using the credentials you assign.
 
 Because the backend is validating the `Host` header and you are allowing only trusted IP ranges in Nginx, random port scans or subdomain brute-force tools will be denied before they reach the React apps.
 
