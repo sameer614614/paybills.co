@@ -10,9 +10,33 @@ export function createApp() {
   const app = express();
 
   app.use(helmet());
+  const normalizeOrigin = (origin: string) => origin.trim().replace(/\/$/, '');
+
+  const allowedOrigins = env.CLIENT_ORIGIN.split(',')
+    .map(normalizeOrigin)
+    .filter(Boolean);
+
+  if (allowedOrigins.length === 0) {
+    throw new Error('CLIENT_ORIGIN must include at least one allowed origin');
+  }
+
   app.use(
     cors({
-      origin: env.CLIENT_ORIGIN,
+      origin(origin, callback) {
+        if (!origin) {
+          callback(null, true);
+          return;
+        }
+
+        const normalizedOrigin = normalizeOrigin(origin);
+
+        if (allowedOrigins.includes(normalizedOrigin)) {
+          callback(null, true);
+          return;
+        }
+
+        callback(new Error(`Origin not allowed by CORS: ${origin}`));
+      },
       credentials: true,
     }),
   );
