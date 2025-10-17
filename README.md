@@ -1,4 +1,6 @@
-# paybillswithus.com
+# paybills.co
+
+my words:
 
 i want to make website show all US users pay with us and get every month 25% off, 
 we will handle all type of bills, like tab for internet and showing all major carrier that offer internet, 
@@ -38,7 +40,13 @@ also for visiter have option directly or sign up,
 if user dont want sign up they can call directly
 if user complete auth assign new number for database
 
+
+
+
 ******
+old codex ans or progress:
+
+
 ✅ AutoMerge Codex test successful
 
 any question you can before we starting
