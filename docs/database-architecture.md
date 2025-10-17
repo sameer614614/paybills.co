@@ -29,8 +29,8 @@ Debian on your VPS.
    database for the app:
    ```bash
    sudo -u postgres psql
-   CREATE ROLE paybills_app WITH LOGIN PASSWORD 'replace-with-strong-password';
-   CREATE DATABASE paybills_prod OWNER paybills_app;
+   CREATE ROLE billspay_app WITH LOGIN PASSWORD 'replace-with-strong-password';
+   CREATE DATABASE billspay_prod OWNER billspay_app;
    \q
    ```
 5. Harden the instance:
@@ -333,7 +333,7 @@ or opportunistic scans.
 1. Provision the PostgreSQL instance using the steps above.
 2. Apply the schema migrations in a staging environment first.
 3. Wire the backend service (e.g., Node/Express, NestJS, or Go) to use the
-   `paybills_prod` database and expose the API endpoints.
+   `billspay_prod` database and expose the API endpoints.
 4. Integrate the front end with the new APIs once authentication is live.
 5. Iterate on admin and agent requirements using the same modular structure.
 
