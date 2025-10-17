@@ -1,32 +1,51 @@
 name: AutoMerge Codex Pull Requests
+
 on:
   pull_request:
-    types: [opened, synchronize, reopened]
+    branches: [ main ]
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: write
+  pull-requests: write
 
 jobs:
   automerge:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
-
     steps:
-      - name: Check out repository
+      - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Set up Git user
+      - name: Auto-resolve simple conflicts (README, docs, markdown)
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
 
-      - name: Fetch all branches
-        run: git fetch --all
+          # Stash Codex version of docs if present
+          for file in $(git diff --name-only --diff-filter=U || true); do
+            if [[ $file == *.md || $file == docs/* ]]; then
+              echo "Resolving markdown/doc conflict in $file by preferring Codex version"
+              git checkout --theirs "$file"
+              git add "$file"
+            fi
+          done
 
-      - name: Merge Codex PR into main (prefer Codex changes)
+      - name: Commit auto-resolved conflicts
         run: |
-          TARGET_BRANCH="main"
-          SOURCE_BRANCH="${{ github.head_ref }}"
-          echo "Merging $SOURCE_BRANCH → $TARGET_BRANCH preferring Codex changes..."
-          git checkout $TARGET_BRANCH
-          git merge -X theirs origin/$SOURCE_BRANCH -m "Auto merge Codex PR preferring Codex changes"
-          git push origin $TARGET_BRANCH
+          if ! git diff --cached --quiet; then
+            git commit -m "🤖 Auto-resolved Codex doc conflicts"
+          fi
+
+      - name: Merge Codex PR automatically
+        uses: pascalgn/automerge-action@v0.16.3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MERGE_METHOD: squash
+          MERGE_DELETE_BRANCH: true
+          MERGE_RETRIES: 6
+          MERGE_RETRY_SLEEP: 10000
+          MERGE_FILTER_AUTHOR: "sameer614614"
+          MERGE_COMMIT_MESSAGE: "🤖 Auto-merged latest code updates from Codex"
+
