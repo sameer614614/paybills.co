@@ -1,0 +1,32 @@
+name: AutoMerge Codex Pull Requests
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  automerge:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Git user
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Fetch all branches
+        run: git fetch --all
+
+      - name: Merge Codex PR into main (prefer Codex changes)
+        run: |
+          TARGET_BRANCH="main"
+          SOURCE_BRANCH="${{ github.head_ref }}"
+          echo "Merging $SOURCE_BRANCH → $TARGET_BRANCH preferring Codex changes..."
+          git checkout $TARGET_BRANCH
+          git merge -X theirs origin/$SOURCE_BRANCH -m "Auto merge Codex PR preferring Codex changes"
+          git push origin $TARGET_BRANCH
