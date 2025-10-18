@@ -581,6 +581,11 @@ function PaymentMethodsPanel({ profile }: { profile: Profile | null }) {
                             <input
                               value={editing.expMonth}
                               onChange={(event) => handleEditFieldChange('expMonth', event.target.value)}
+                              onFocus={() => {
+                                if (!editing.expMonth) {
+                                  handleEditFieldChange('expMonth', '')
+                                }
+                              }}
                               placeholder="MM"
                               className="mt-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20"
                             />
@@ -590,6 +595,11 @@ function PaymentMethodsPanel({ profile }: { profile: Profile | null }) {
                             <input
                               value={editing.expYear}
                               onChange={(event) => handleEditFieldChange('expYear', event.target.value)}
+                              onFocus={() => {
+                                if (!editing.expYear) {
+                                  handleEditFieldChange('expYear', '')
+                                }
+                              }}
                               placeholder="YYYY"
                               className="mt-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20"
                             />
@@ -599,6 +609,11 @@ function PaymentMethodsPanel({ profile }: { profile: Profile | null }) {
                             <input
                               value={editing.securityCode}
                               onChange={(event) => handleEditFieldChange('securityCode', event.target.value)}
+                              onFocus={() => {
+                                if (!editing.securityCode) {
+                                  handleEditFieldChange('securityCode', '')
+                                }
+                              }}
                               placeholder="CVV"
                               className="mt-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20"
                             />
@@ -606,11 +621,19 @@ function PaymentMethodsPanel({ profile }: { profile: Profile | null }) {
                         </div>
                       )}
                       <label className="flex flex-col text-sm font-medium text-slate-700">
-                        New card/account number (optional)
+                        Replace card/account number
+                        <span className="text-xs font-normal text-slate-500">
+                          Current ending in •••• {method.last4}
+                        </span>
                         <input
                           value={editing.accountNumber}
                           onChange={(event) => handleEditFieldChange('accountNumber', event.target.value)}
-                          placeholder="Enter only if replacing the number"
+                          onFocus={() => {
+                            if (!editing.accountNumber) {
+                              handleEditFieldChange('accountNumber', '')
+                            }
+                          }}
+                          placeholder="Enter the full number to replace on file"
                           className="mt-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20"
                         />
                       </label>
