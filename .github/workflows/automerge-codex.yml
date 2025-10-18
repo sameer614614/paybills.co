@@ -2,11 +2,7 @@ name: AutoMerge Codex Pull Requests
 
 on:
   pull_request:
-    types:
-      - opened
-      - synchronize
-      - reopened
-      - ready_for_review
+    types: [opened, synchronize, reopened, ready_for_review]
     branches:
       - main
   workflow_dispatch:
@@ -21,31 +17,30 @@ jobs:
   automerge:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Setup Git identity
+      - name: Set up Git
         run: |
           git config --global user.name "sameer614614"
           git config --global user.email "sameer614614@gmail.com"
 
-      - name: Enable auto-merge for Codex PRs
-        run: |
-          echo "🔁 Checking for Codex PRs to auto-merge..."
-          gh pr list --state open --json number,title,headRefName,author \
-            --jq '.[] | select(.author.login=="codex") | .number' | while read pr; do
-              echo "✅ Auto-merging PR #$pr"
-              gh pr merge $pr --squash --admin --delete-branch
-            done
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Auto-sync main branch
+      - name: Auto resolve conflicts by taking incoming (Codex) changes
         run: |
           git fetch origin main
-          git pull origin main
-          git push origin main
+          git checkout ${{ github.head_ref }}
+          git merge -X theirs origin/main || true
+          git commit -am "🔄 Auto-resolved conflicts using incoming Codex branch" || true
+          git push origin HEAD:${{ github.head_ref }} || true
+
+      - name: Auto merge PR if checks pass
+        uses: pascalgn/automerge-action@v0.15.6
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MERGE_METHOD: squash
+          MERGE_COMMIT_MESSAGE: "✅ Auto merged Codex PR — incoming changes accepted"
+          MERGE_RETRIES: 10
+          MERGE_RETRY_SLEEP: 60000
+          UPDATE_METHOD: rebase
