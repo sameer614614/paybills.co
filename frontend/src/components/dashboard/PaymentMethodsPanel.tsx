@@ -59,17 +59,30 @@ const paymentMethodFormSchema = z
     provider: z.string().min(1, 'Provider is required'),
     cardholderName: z.string().optional(),
     accountNumber: z.string().min(4, 'Account number is required'),
+    confirmAccountNumber: z.string().min(4, 'Re-enter the account number'),
     nickname: z.string().optional(),
     expMonth: z.string().optional(),
     expYear: z.string().optional(),
     brand: z.string().optional(),
     securityCode: z.string().optional(),
+    routingNumber: z.string().optional(),
+    accountType: z.enum(['CHECKING', 'SAVINGS', 'BUSINESS']).optional(),
+    ownerName: z.string().optional(),
     useProfileAddress: z.boolean(),
     billingAddress: billingAddressFormSchema.optional(),
     isDefault: z.boolean().optional(),
   })
   .superRefine((data, ctx) => {
     const digitsOnly = data.accountNumber.replace(/\D/g, '')
+    const confirmDigits = data.confirmAccountNumber.replace(/\D/g, '')
+
+    if (data.type === 'BANK_ACCOUNT' && digitsOnly !== confirmDigits) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['confirmAccountNumber'],
+        message: 'Account numbers must match.',
+      })
+    }
 
     if (data.type === 'BANK_ACCOUNT' && digitsOnly.length < 4) {
       ctx.addIssue({
@@ -133,6 +146,30 @@ const paymentMethodFormSchema = z
           message: 'Provide a billing address or choose the profile address.',
         })
       }
+    } else {
+      if (!data.routingNumber || !/^\d{9}$/.test(data.routingNumber.replace(/\s+/g, ''))) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['routingNumber'],
+          message: 'Routing numbers must be 9 digits.',
+        })
+      }
+
+      if (!data.accountType) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['accountType'],
+          message: 'Select an account type.',
+        })
+      }
+
+      if (!data.ownerName || data.ownerName.trim().length === 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['ownerName'],
+          message: 'Account owner name is required.',
+        })
+      }
     }
   })
 
@@ -156,8 +193,35 @@ type EditState = {
   }
   useProfileAddress: boolean
   accountNumber: string
-  securityCode: string
+  routingNumber: string
+  accountType: 'CHECKING' | 'SAVINGS' | 'BUSINESS' | ''
+  ownerName: string
   isDefault: boolean
+}
+
+const ACCOUNT_TYPE_OPTIONS = [
+  { value: 'CHECKING', label: 'Checking' },
+  { value: 'SAVINGS', label: 'Savings' },
+  { value: 'BUSINESS', label: 'Business checking' },
+]
+
+function formatCardNumber(input: string) {
+  const digitsOnly = input.replace(/\D/g, '').slice(0, 19)
+  const groups = digitsOnly.match(/.{1,4}/g)
+  return groups ? groups.join(' ') : ''
+}
+
+function formatAccountType(type: string | null) {
+  if (!type) return null
+  const match = ACCOUNT_TYPE_OPTIONS.find((option) => option.value === type)
+  return match ? match.label : type
+}
+
+function normalizeAccountType(value: string | null): 'CHECKING' | 'SAVINGS' | 'BUSINESS' | '' {
+  if (value === 'CHECKING' || value === 'SAVINGS' || value === 'BUSINESS') {
+    return value
+  }
+  return ''
 }
 
 function buildProfileAddress(profile: Profile | null) {
@@ -192,11 +256,15 @@ function PaymentMethodsPanel({ profile }: { profile: Profile | null }) {
       provider: '',
       cardholderName: '',
       accountNumber: '',
+      confirmAccountNumber: '',
       nickname: '',
       expMonth: '',
       expYear: '',
       brand: '',
       securityCode: '',
+      routingNumber: '',
+      accountType: 'CHECKING',
+      ownerName: '',
       billingAddress: {
         line1: '',
         line2: '',
@@ -211,6 +279,65 @@ function PaymentMethodsPanel({ profile }: { profile: Profile | null }) {
 
   const selectedType = watch('type')
   const useProfileBilling = watch('useProfileAddress')
+  const accountNumberValue = watch('accountNumber')
+  const routingNumberValue = watch('routingNumber')
+
+  useEffect(() => {
+    if (selectedType !== 'BANK_ACCOUNT') {
+      setValue('confirmAccountNumber', accountNumberValue, { shouldDirty: true })
+    }
+  }, [selectedType, accountNumberValue, setValue])
+
+  useEffect(() => {
+    if (selectedType === 'BANK_ACCOUNT') {
+      setValue('expMonth', '', { shouldDirty: false })
+      setValue('expYear', '', { shouldDirty: false })
+      setValue('securityCode', '', { shouldDirty: false })
+      setValue('brand', '', { shouldDirty: false })
+    } else {
+      setValue('routingNumber', '', { shouldDirty: false })
+      setValue('ownerName', '', { shouldDirty: false })
+      setValue('accountType', 'CHECKING', { shouldDirty: false })
+      setValue('confirmAccountNumber', accountNumberValue, { shouldDirty: false })
+    }
+  }, [selectedType, setValue, accountNumberValue])
+
+  useEffect(() => {
+    if (selectedType === 'BANK_ACCOUNT' && routingNumberValue) {
+      const digitsOnly = routingNumberValue.replace(/\D/g, '').slice(0, 9)
+      if (digitsOnly !== routingNumberValue) {
+        setValue('routingNumber', digitsOnly, { shouldDirty: true })
+      }
+    }
+  }, [routingNumberValue, selectedType, setValue])
+
+  const accountNumberRegister = register('accountNumber', {
+    onChange: (event) => {
+      if (selectedType === 'BANK_ACCOUNT') {
+        const digitsOnly = event.target.value.replace(/\D/g, '').slice(0, 17)
+        if (digitsOnly !== event.target.value) {
+          setValue('accountNumber', digitsOnly, { shouldDirty: true })
+        }
+        return
+      }
+
+      const formatted = formatCardNumber(event.target.value)
+      if (formatted !== event.target.value) {
+        setValue('accountNumber', formatted, { shouldDirty: true })
+      }
+    },
+  })
+
+  const confirmAccountNumberRegister = register('confirmAccountNumber', {
+    onChange: (event) => {
+      if (selectedType === 'BANK_ACCOUNT') {
+        const digitsOnly = event.target.value.replace(/\D/g, '').slice(0, 17)
+        if (digitsOnly !== event.target.value) {
+          setValue('confirmAccountNumber', digitsOnly, { shouldDirty: true })
+        }
+      }
+    },
+  })
 
   useEffect(() => {
     if (!useProfileBilling && profileAddress) {
@@ -234,12 +361,14 @@ function PaymentMethodsPanel({ profile }: { profile: Profile | null }) {
     mutationFn: (values: PaymentMethodFormValues) => {
       const sanitizedAccount = values.accountNumber.replace(/\s+/g, '')
       const digitsOnly = sanitizedAccount.replace(/\D/g, '')
+      const routingDigits = values.routingNumber?.replace(/\D/g, '') ?? null
       const expMonthValue =
         values.type === 'BANK_ACCOUNT' || !values.expMonth ? null : Number(values.expMonth)
       const expYearValue =
         values.type === 'BANK_ACCOUNT' || !values.expYear ? null : Number(values.expYear)
       const cardholderValue = values.cardholderName?.trim() ?? ''
       const brandValue = values.brand?.trim() ?? ''
+      const ownerNameValue = values.ownerName?.trim() ?? ''
       const billingAddress =
         values.useProfileAddress || !values.billingAddress
           ? undefined
@@ -265,6 +394,14 @@ function PaymentMethodsPanel({ profile }: { profile: Profile | null }) {
             : values.securityCode && values.securityCode.trim().length > 0
               ? values.securityCode.trim()
               : undefined,
+        routingNumber: values.type === 'BANK_ACCOUNT' ? routingDigits : undefined,
+        accountType: values.type === 'BANK_ACCOUNT' ? values.accountType ?? 'CHECKING' : undefined,
+        ownerName:
+          values.type === 'BANK_ACCOUNT'
+            ? ownerNameValue.length > 0
+              ? ownerNameValue
+              : undefined
+            : undefined,
         billingAddress,
         useProfileAddress: values.useProfileAddress,
         isDefault: values.isDefault,
@@ -279,11 +416,15 @@ function PaymentMethodsPanel({ profile }: { profile: Profile | null }) {
         provider: '',
         cardholderName: '',
         accountNumber: '',
+        confirmAccountNumber: '',
         nickname: '',
         expMonth: '',
         expYear: '',
         brand: '',
         securityCode: '',
+        routingNumber: '',
+        accountType: 'CHECKING',
+        ownerName: '',
         billingAddress: {
           line1: '',
           line2: '',
@@ -343,7 +484,9 @@ function PaymentMethodsPanel({ profile }: { profile: Profile | null }) {
       },
       useProfileAddress: usesProfileBilling,
       accountNumber: '',
-      securityCode: '',
+      routingNumber: method.routingNumber ?? '',
+      accountType: normalizeAccountType(method.accountType),
+      ownerName: method.ownerName ?? '',
       isDefault: method.isDefault,
     })
   }
@@ -364,6 +507,15 @@ function PaymentMethodsPanel({ profile }: { profile: Profile | null }) {
         return { ...prev, isDefault: value }
       }
       if (typeof value === 'string') {
+        if (field === 'accountNumber' && prev.type !== 'BANK_ACCOUNT') {
+          return { ...prev, accountNumber: formatCardNumber(value) }
+        }
+        if (field === 'accountNumber' && prev.type === 'BANK_ACCOUNT') {
+          return { ...prev, accountNumber: value.replace(/\D/g, '').slice(0, 17) }
+        }
+        if (field === 'routingNumber') {
+          return { ...prev, routingNumber: value.replace(/\D/g, '').slice(0, 9) }
+        }
         return { ...prev, [field]: value }
       }
       return prev
@@ -411,8 +563,12 @@ function PaymentMethodsPanel({ profile }: { profile: Profile | null }) {
       updates.accountNumber = digitsOnly
     }
 
-    if (editing.type !== 'BANK_ACCOUNT' && editing.securityCode.trim()) {
-      updates.securityCode = editing.securityCode.trim()
+    if (editing.type === 'BANK_ACCOUNT') {
+      if (editing.routingNumber.trim()) {
+        updates.routingNumber = editing.routingNumber.replace(/\D/g, '').slice(0, 9)
+      }
+      updates.accountType = editing.accountType || undefined
+      updates.ownerName = editing.ownerName.trim() ? editing.ownerName.trim() : null
     }
 
     updateMutation.mutate({ id: editing.id, updates })
@@ -501,6 +657,15 @@ function PaymentMethodsPanel({ profile }: { profile: Profile | null }) {
                     {method.cardholderName && (
                       <p className="text-sm text-slate-500">Card holder: {method.cardholderName}</p>
                     )}
+                    {method.type === 'BANK_ACCOUNT' && method.ownerName && (
+                      <p className="text-sm text-slate-500">Account owner: {method.ownerName}</p>
+                    )}
+                    {method.type === 'BANK_ACCOUNT' && method.routingNumber && (
+                      <p className="text-sm text-slate-500">Routing #: {method.routingNumber}</p>
+                    )}
+                    {method.type === 'BANK_ACCOUNT' && method.accountType && (
+                      <p className="text-sm text-slate-500">Type: {formatAccountType(method.accountType)}</p>
+                    )}
                     <p className="text-xs text-slate-400">{formatAddress(method)}</p>
                     {method.isDefault && (
                       <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-brand/10 px-3 py-1 text-xs font-semibold text-brand">
@@ -574,13 +739,18 @@ function PaymentMethodsPanel({ profile }: { profile: Profile | null }) {
                           className="mt-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20"
                         />
                       </label>
-                      {editing.type !== 'BANK_ACCOUNT' && (
-                        <div className="grid grid-cols-3 gap-3">
+                      {editing.type !== 'BANK_ACCOUNT' ? (
+                        <div className="grid grid-cols-2 gap-3">
                           <label className="flex flex-col text-sm font-medium text-slate-700">
                             Exp. month
                             <input
                               value={editing.expMonth}
                               onChange={(event) => handleEditFieldChange('expMonth', event.target.value)}
+                              onFocus={() => {
+                                if (!editing.expMonth) {
+                                  handleEditFieldChange('expMonth', '')
+                                }
+                              }}
                               placeholder="MM"
                               className="mt-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20"
                             />
@@ -590,27 +760,66 @@ function PaymentMethodsPanel({ profile }: { profile: Profile | null }) {
                             <input
                               value={editing.expYear}
                               onChange={(event) => handleEditFieldChange('expYear', event.target.value)}
+                              onFocus={() => {
+                                if (!editing.expYear) {
+                                  handleEditFieldChange('expYear', '')
+                                }
+                              }}
                               placeholder="YYYY"
                               className="mt-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20"
                             />
                           </label>
-                          <label className="flex flex-col text-sm font-medium text-slate-700">
-                            CVV (optional)
+                        </div>
+                      ) : (
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          <label className="flex flex-col text-sm font-medium text-slate-700 sm:col-span-2">
+                            Account owner name
                             <input
-                              value={editing.securityCode}
-                              onChange={(event) => handleEditFieldChange('securityCode', event.target.value)}
-                              placeholder="CVV"
+                              value={editing.ownerName}
+                              onChange={(event) => handleEditFieldChange('ownerName', event.target.value)}
                               className="mt-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20"
                             />
+                          </label>
+                          <label className="flex flex-col text-sm font-medium text-slate-700">
+                            Routing number
+                            <input
+                              value={editing.routingNumber}
+                              onChange={(event) => handleEditFieldChange('routingNumber', event.target.value)}
+                              placeholder="9 digits"
+                              className="mt-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20"
+                            />
+                          </label>
+                          <label className="flex flex-col text-sm font-medium text-slate-700">
+                            Account type
+                            <select
+                              value={editing.accountType}
+                              onChange={(event) => handleEditFieldChange('accountType', event.target.value)}
+                              className="mt-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20"
+                            >
+                              <option value="">Select type</option>
+                              {ACCOUNT_TYPE_OPTIONS.map((option) => (
+                                <option key={option.value} value={option.value}>
+                                  {option.label}
+                                </option>
+                              ))}
+                            </select>
                           </label>
                         </div>
                       )}
                       <label className="flex flex-col text-sm font-medium text-slate-700">
-                        New card/account number (optional)
+                        Replace card/account number
+                        <span className="text-xs font-normal text-slate-500">
+                          Current ending in •••• {method.last4}
+                        </span>
                         <input
                           value={editing.accountNumber}
                           onChange={(event) => handleEditFieldChange('accountNumber', event.target.value)}
-                          placeholder="Enter only if replacing the number"
+                          onFocus={() => {
+                            if (!editing.accountNumber) {
+                              handleEditFieldChange('accountNumber', '')
+                            }
+                          }}
+                          placeholder="Enter the full number to replace on file"
                           className="mt-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20"
                         />
                       </label>
@@ -748,7 +957,7 @@ function PaymentMethodsPanel({ profile }: { profile: Profile | null }) {
               </label>
 
               <label className="flex flex-col text-sm font-medium text-slate-700">
-                Provider
+                {selectedType === 'BANK_ACCOUNT' ? 'Bank name' : 'Provider'}
                 <input
                   className="mt-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20"
                   {...register('provider')}
@@ -771,10 +980,23 @@ function PaymentMethodsPanel({ profile }: { profile: Profile | null }) {
                 {selectedType === 'BANK_ACCOUNT' ? 'Account number' : 'Card number'}
                 <input
                   className="mt-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20"
-                  {...register('accountNumber')}
+                  {...accountNumberRegister}
                 />
                 {errors.accountNumber && <span className="text-sm text-red-600">{errors.accountNumber.message}</span>}
               </label>
+
+              {selectedType === 'BANK_ACCOUNT' && (
+                <label className="flex flex-col text-sm font-medium text-slate-700">
+                  Confirm account number
+                  <input
+                    className="mt-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20"
+                    {...confirmAccountNumberRegister}
+                  />
+                  {errors.confirmAccountNumber && (
+                    <span className="text-sm text-red-600">{errors.confirmAccountNumber.message}</span>
+                  )}
+                </label>
+              )}
 
               <label className="flex flex-col text-sm font-medium text-slate-700">
                 Nickname (optional)
@@ -824,6 +1046,39 @@ function PaymentMethodsPanel({ profile }: { profile: Profile | null }) {
                     {...register('brand')}
                   />
                 </label>
+              )}
+
+              {selectedType === 'BANK_ACCOUNT' && (
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <label className="flex flex-col text-sm font-medium text-slate-700 sm:col-span-2">
+                    Account owner name
+                    <input
+                      className="mt-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20"
+                      {...register('ownerName')}
+                    />
+                    {errors.ownerName && <span className="text-sm text-red-600">{errors.ownerName.message}</span>}
+                  </label>
+                  <label className="flex flex-col text-sm font-medium text-slate-700">
+                    Routing number
+                    <input
+                      className="mt-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20"
+                      {...register('routingNumber')}
+                    />
+                    {errors.routingNumber && <span className="text-sm text-red-600">{errors.routingNumber.message}</span>}
+                  </label>
+                  <label className="flex flex-col text-sm font-medium text-slate-700">
+                    Account type
+                    <select
+                      className="mt-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20"
+                      {...register('accountType')}
+                    >
+                      <option value="CHECKING">Checking</option>
+                      <option value="SAVINGS">Savings</option>
+                      <option value="BUSINESS">Business checking</option>
+                    </select>
+                    {errors.accountType && <span className="text-sm text-red-600">{errors.accountType.message}</span>}
+                  </label>
+                </div>
               )}
 
               <div className="rounded-xl border border-slate-200 bg-white p-4 text-sm">

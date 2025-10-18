@@ -1,11 +1,11 @@
 import type { Prisma } from '@prisma/client';
 import prisma from '../utils/prisma.js';
-import { encryptSensitive } from '../utils/encryption.js';
+import { decryptSensitive, encryptSensitive } from '../utils/encryption.js';
 
 type PaymentMethodType = 'CREDIT_CARD' | 'DEBIT_CARD' | 'BANK_ACCOUNT';
 
 export async function listPaymentMethods(userId: string) {
-  return prisma.paymentMethod.findMany({
+  const methods = await prisma.paymentMethod.findMany({
     where: { userId },
     orderBy: [{ isDefault: 'desc' }, { createdAt: 'desc' }],
     select: {
@@ -18,6 +18,9 @@ export async function listPaymentMethods(userId: string) {
       expYear: true,
       brand: true,
       last4: true,
+      routingNumber: true,
+      accountType: true,
+      ownerName: true,
       billingAddressLine1: true,
       billingAddressLine2: true,
       billingCity: true,
@@ -28,6 +31,11 @@ export async function listPaymentMethods(userId: string) {
       updatedAt: true,
     },
   });
+
+  return methods.map((method) => ({
+    ...method,
+    routingNumber: method.routingNumber ? decryptSensitive(method.routingNumber) : null,
+  }));
 }
 
 export async function createPaymentMethod(
@@ -51,6 +59,9 @@ export async function createPaymentMethod(
     } | null;
     useProfileAddress?: boolean;
     isDefault?: boolean;
+    routingNumber?: string | null;
+    accountType?: string | null;
+    ownerName?: string | null;
   },
 ) {
   let billingAddress = data.billingAddress ?? null;
@@ -83,6 +94,7 @@ export async function createPaymentMethod(
   const sanitizedAccountNumber = data.accountNumber.replace(/\s+/g, '');
   const digitsOnly = sanitizedAccountNumber.replace(/\D/g, '');
   const sanitizedSecurityCode = data.securityCode ? data.securityCode.replace(/\s+/g, '') : null;
+  const sanitizedRoutingNumber = data.routingNumber ? data.routingNumber.replace(/\s+/g, '') : null;
 
   const created = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     if (shouldBeDefault) {
@@ -104,6 +116,9 @@ export async function createPaymentMethod(
         brand: data.brand ?? null,
         last4: digitsOnly.slice(-4),
         securityCode: sanitizedSecurityCode ? encryptSensitive(sanitizedSecurityCode) : null,
+        routingNumber: sanitizedRoutingNumber ? encryptSensitive(sanitizedRoutingNumber) : null,
+        accountType: data.accountType ?? null,
+        ownerName: data.ownerName ?? null,
         billingAddressLine1: billingAddress?.line1 ?? null,
         billingAddressLine2: billingAddress?.line2 ?? null,
         billingCity: billingAddress?.city ?? null,
@@ -134,6 +149,9 @@ export async function createPaymentMethod(
     expYear: created.expYear,
     brand: created.brand,
     last4: created.last4,
+    routingNumber: created.routingNumber ? decryptSensitive(created.routingNumber) : null,
+    accountType: created.accountType,
+    ownerName: created.ownerName,
     billingAddressLine1: created.billingAddressLine1,
     billingAddressLine2: created.billingAddressLine2,
     billingCity: created.billingCity,
@@ -166,6 +184,9 @@ export async function updatePaymentMethod(
     } | null;
     useProfileAddress?: boolean;
     isDefault?: boolean;
+    routingNumber?: string | null;
+    accountType?: string | null;
+    ownerName?: string | null;
   },
 ) {
   const existing = await prisma.paymentMethod.findUnique({ where: { id } });
@@ -211,6 +232,7 @@ export async function updatePaymentMethod(
     const digitsOnly = sanitizedAccountNumber ? sanitizedAccountNumber.replace(/\D/g, '') : null;
 
     const sanitizedSecurityCodeUpdate = data.securityCode ? data.securityCode.replace(/\s+/g, '') : null;
+    const sanitizedRoutingNumberUpdate = data.routingNumber ? data.routingNumber.replace(/\s+/g, '') : null;
 
     const updatedPaymentMethod = await tx.paymentMethod.update({
       where: { id },
@@ -227,6 +249,14 @@ export async function updatePaymentMethod(
         securityCode: sanitizedSecurityCodeUpdate
           ? encryptSensitive(sanitizedSecurityCodeUpdate)
           : existing.securityCode,
+        routingNumber: sanitizedRoutingNumberUpdate
+          ? encryptSensitive(sanitizedRoutingNumberUpdate)
+          : data.routingNumber === null
+            ? null
+            : existing.routingNumber,
+        accountType:
+          data.accountType !== undefined ? data.accountType : existing.accountType,
+        ownerName: data.ownerName !== undefined ? data.ownerName : existing.ownerName,
         last4: digitsOnly ? digitsOnly.slice(-4) : existing.last4,
         billingAddressLine1: billingAddress
           ? billingAddress.line1
@@ -289,6 +319,9 @@ export async function updatePaymentMethod(
     expYear: updated.expYear,
     brand: updated.brand,
     last4: updated.last4,
+    routingNumber: updated.routingNumber ? decryptSensitive(updated.routingNumber) : null,
+    accountType: updated.accountType,
+    ownerName: updated.ownerName,
     billingAddressLine1: updated.billingAddressLine1,
     billingAddressLine2: updated.billingAddressLine2,
     billingCity: updated.billingCity,

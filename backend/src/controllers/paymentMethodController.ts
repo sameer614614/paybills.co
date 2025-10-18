@@ -26,7 +26,7 @@ export async function postPaymentMethod(req: AuthenticatedRequest, res: Response
     return res.status(422).json({ message: 'Invalid payment method payload', details: parsed.error.flatten() });
   }
 
-  const payload = parsed.data;
+  const { confirmAccountNumber, ...payload } = parsed.data;
 
   const paymentMethod = await createPaymentMethod(userId, {
     type: payload.type,
@@ -38,6 +38,9 @@ export async function postPaymentMethod(req: AuthenticatedRequest, res: Response
     expYear: payload.expYear ?? null,
     brand: normalizeNullable(payload.brand),
     securityCode: normalizeNullable(payload.securityCode),
+    routingNumber: normalizeNullable(payload.routingNumber),
+    accountType: normalizeNullable(payload.accountType),
+    ownerName: normalizeNullable(payload.ownerName),
     billingAddress: payload.billingAddress ?? null,
     useProfileAddress: payload.useProfileAddress ?? false,
     isDefault: payload.isDefault ?? false,
@@ -69,6 +72,9 @@ export async function patchPaymentMethod(req: AuthenticatedRequest, res: Respons
     cardholderName: normalizeNullable(payload.cardholderName),
     accountNumber: payload.accountNumber ?? null,
     securityCode: normalizeNullable(payload.securityCode),
+    routingNumber: normalizeNullable(payload.routingNumber),
+    accountType: normalizeNullable(payload.accountType),
+    ownerName: normalizeNullable(payload.ownerName),
     billingAddress: payload.billingAddress ?? null,
     useProfileAddress: payload.useProfileAddress,
     isDefault: payload.isDefault,

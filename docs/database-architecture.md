@@ -29,8 +29,8 @@ Debian on your VPS.
    database for the app:
    ```bash
    sudo -u postgres psql
-   CREATE ROLE paybills_app WITH LOGIN PASSWORD 'replace-with-strong-password';
-   CREATE DATABASE paybills_prod OWNER paybills_app;
+   CREATE ROLE billspay_app WITH LOGIN PASSWORD 'replace-with-strong-password';
+   CREATE DATABASE billspay_prod OWNER billspay_app;
    \q
    ```
 5. Harden the instance:
@@ -134,9 +134,14 @@ erDiagram
 * **Customer number generation** – The API now guarantees a unique
   `customer_number` for every user and returns it in the JWT payload so both the
   dashboard and the call-center tooling can reference the same identifier.
+* **Identity uniqueness** – The API enforces unique combinations for email,
+  SSN last four, and date of birth when onboarding new users so the forgot
+  password workflow can safely identify a single account by SSN/DOB alone.
 * **Payment methods** – Store only the minimum necessary details. Full card or
   bank numbers must be tokenized or encrypted via your chosen payment processor
-  before persisting `account_number`/`routing_number` equivalents.
+  before persisting `account_number`/`routing_number` equivalents. Additional
+  columns capture `routing_number`, `account_type`, and `owner_name` for bank
+  accounts so agents can confirm details while assisting customers.
 * **Billers & receipts** – Only agents and administrators can mutate these
   records. Authenticated users query their billers, payment methods, and
   receipts in read-only mode.
@@ -188,6 +193,9 @@ CREATE TABLE payment_methods (
     exp_year SMALLINT,
     brand TEXT,
     security_code TEXT,
+    routing_number TEXT,
+    account_type TEXT,
+    owner_name TEXT,
     billing_address_line1 TEXT,
     billing_address_line2 TEXT,
     billing_city TEXT,
@@ -333,7 +341,7 @@ or opportunistic scans.
 1. Provision the PostgreSQL instance using the steps above.
 2. Apply the schema migrations in a staging environment first.
 3. Wire the backend service (e.g., Node/Express, NestJS, or Go) to use the
-   `paybills_prod` database and expose the API endpoints.
+   `billspay_prod` database and expose the API endpoints.
 4. Integrate the front end with the new APIs once authentication is live.
 5. Iterate on admin and agent requirements using the same modular structure.
 

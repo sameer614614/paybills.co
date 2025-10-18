@@ -1,5 +1,9 @@
 const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:4000/api';
 
+function resolveBaseUrl(base: string) {
+  return base.endsWith('/') ? base : `${base}/`;
+}
+
 type Options = {
   method?: string;
   token?: string | null;
@@ -8,7 +12,8 @@ type Options = {
 };
 
 function buildUrl(path: string, params?: Record<string, string | undefined>) {
-  const url = new URL(path, API_BASE);
+  const normalizedPath = path.replace(/^\/+/, '');
+  const url = new URL(normalizedPath, resolveBaseUrl(API_BASE));
   if (params) {
     Object.entries(params).forEach(([key, value]) => {
       if (value) {
