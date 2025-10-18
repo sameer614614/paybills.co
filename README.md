@@ -1,77 +1,5 @@
 # billspay.co
 
-my words:
-
-i want to make website show all US users pay with us and get every month 25% off, 
-we will handle all type of bills, like tab for internet and showing all major carrier that offer internet, 
-same tab for home, same for tv, and same tab for electric bills, 
-
-languages vite react with all modern css etc, 
-light colors theme and modern touch and easy for user to understand and easy to get users payment info on user portal after auth
-
-i want full detail readme.md then we will starting coding,
-
-for registeration 
-ask email, name, password, repassword, last 4 of ssn, dob, address
-for password reset email, plus address, last 4 of ssn
-
-also generate unique customer for each customer
-
-we wil do hosting and backend on godaddy vps
-with current domain: billspay.co
-i have already vps pruchased form godaddy
-
-make admin panel secure, so public not get it running subdomain or other tools
-
-admin panel
-handle agent logins
-so agent can put customer number in agent portal to get information and udpate the billers and receipt and also view customer payment information
-
-for users
-after auth, can add multiple cards, plus manually checking routing numebr
-only billers can add to customers account by agent only via call,
-show option to call us get 25% dicount everymonth, give me permission to handle your all type of bills
-including tv+internet+home+electric bills+,mobiles
-
-while for visiter show zipcode field for providers saerch
-if no zipcode major providers 7-9 privoders for each bill type catergry
-
-also for visiter have option directly or sign up,
-if user dont want sign up they can call directly
-if user complete auth assign new number for database
-
-
-
-
-******
-old codex ans or progress:
-
-
-✅ AutoMerge Codex test successful
-
-any question you can before we starting
-also make section of coding 
-like professional organized coding
-dont mix up admin + agent + user portal
-
-proper structure i want
-for section structure
-
-jwt for database 
-no firebase
-
-ask me anything if you want to put , edit or detete any features
-
-make seciton of codings i will make other codex chatlist for other secitons like admin, agent etc
-
-i hope you understand
-also tell me if get any out sourcing or anything
-
-
-tell me full detailed then i will make changes or approve it then we will coding for each secitons
-
-proper flow diagram proper database handling 
-proper erroors any things handling
 
 ---
 
@@ -160,16 +88,6 @@ When you pull new changes onto the GoDaddy VPS, follow this repeatable sequence 
 * `cd ../agent && npm run build`
 6. Deploy the `frontend/dist` bundle to the public site and host the `admin/dist` and `agent/dist` bundles behind their secured hostnames or VPN.
 7. Restart the running processes (for example, `pm2 restart billspay-api` and `pm2 restart billspay-frontend`, or restart the systemd services you configured).
-
-### Firebase deployment path
-
-If you are migrating away from the VPS and onto Firebase, the repository already contains the Firebase configuration scaffolding:
-
-* `firebase.json` defines three Hosting targets (`customer`, `admin`, `agent`) plus the Cloud Functions source directory.
-* `.firebaserc` ships with example target aliases so you can bind the Hosting deploys to your Firebase sites.
-* `functions/` exposes the existing Express API through an `api` HTTPS function so you can deploy the backend with `firebase deploy --only functions`.
-
-Follow the detailed runbook in [`docs/firebase-migration.md`](docs/firebase-migration.md) and [`docs/firebase-phase-2.md`](docs/firebase-phase-2.md) to provision secrets, run the emulator suite, and move the front ends onto Firebase Hosting.
 8. Confirm everything is healthy by hitting the API health check (`curl http://YOUR_API_HOST:4000/health`) and by loading the front-end site in a browser. Attempting to hit `/api/admin/health` or `/api/agent/health` from an unapproved host should return HTTP 403.
 
 These steps are safe to repeat whenever new commits land, and they ensure validation changes (like the payment method updates in this patch) take effect immediately.

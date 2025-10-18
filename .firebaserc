@@ -1,11 +1,5 @@
 {
-  "targets": {
-    "bills25-production": {
-      "hosting": {
-        "customer": ["billspay-customer"],
-        "admin": ["billspay-admin"],
-        "agent": ["billspay-agent"]
-      }
-    }
+  "projects": {
+    "default": "bills25-production"
   }
 }
