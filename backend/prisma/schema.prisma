@@ -45,6 +45,9 @@ model PaymentMethod {
   brand          String?
   last4          String
   securityCode   String?
+  routingNumber  String?
+  accountType    String?
+  ownerName      String?
   billingAddressLine1 String?
   billingAddressLine2 String?
   billingCity    String?

@@ -95,4 +95,16 @@ These steps are safe to repeat whenever new commits land, and they ensure valida
 The core relational model, JWT integration guidance, and a step-by-step PostgreSQL installation checklist for the GoDaddy VPS are documented in [`docs/database-architecture.md`](docs/database-architecture.md). Cross-reference that document with the live Prisma schema in `backend/prisma/schema.prisma` for the authoritative column names used by the running API.
 
 The marketing site highlights the 25% savings offer, showcases supported provider categories, and explains the post-sign-up process. The sign-up form collects all required identity, address, and credential details with client-side validation so agents can complete onboarding while customers immediately gain dashboard access to manage their payment methods.
+
+### Customer enrollment and recovery
+
+* During registration the API blocks duplicate profiles by checking the email address, the last four of the SSN, and the date of birth individually before storing the customer. Any conflict returns field-level errors so the UI can highlight the exact input that needs to change.
+* The self-service “Forgot password” flow now verifies identity with the SSN last four and date of birth (plus an optional customer number). Once the combination matches a single profile the API emails the reset link to the address on file—no email field is exposed on the public form so leaked addresses cannot be harvested.
+* Password reset tokens remain valid for one hour. When a user completes the reset the backend rotates their credentials and automatically logs them in with a fresh JWT.
+
+### Payment method capture rules
+
+* Card payments require the provider name, card holder, full card number (entered in a `#### #### #### ####` format), expiration month/year, CVV, and either the profile billing address or a custom billing address. The dashboard masks saved numbers to the last four digits and forces full re-entry if the user edits the value.
+* Bank accounts require the bank name, routing number, account owner name, account type (checking, savings, or business), and the account number entered twice. Routing numbers surface unmasked in the dashboard so agents can confirm them during calls.
+* Customers can store multiple payment methods, select a default, and update billing addresses independently from the profile address. All sensitive fields (account numbers, routing numbers, CVVs) are encrypted before they are written to PostgreSQL.
 hhh
