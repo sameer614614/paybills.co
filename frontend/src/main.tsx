@@ -7,7 +7,10 @@ import './index.css'
 import HomePage from './pages/Home'
 import SignupPage from './pages/Signup'
 import LoginPage from './pages/Login'
+import ForgotPasswordPage from './pages/ForgotPassword'
+import ResetPasswordPage from './pages/ResetPassword'
 import DashboardPage from './pages/Dashboard'
+import SettingsPage from './pages/Settings'
 import { AuthProvider } from './context/AuthProvider'
 import ProtectedRoute from './components/ProtectedRoute'
 import { queryClient } from './lib/queryClient'
@@ -30,11 +33,23 @@ const router = createBrowserRouter([
         element: <LoginPage />,
       },
       {
+        path: 'forgot-password',
+        element: <ForgotPasswordPage />,
+      },
+      {
+        path: 'reset-password',
+        element: <ResetPasswordPage />,
+      },
+      {
         element: <ProtectedRoute />,
         children: [
           {
             path: 'dashboard',
             element: <DashboardPage />,
+          },
+          {
+            path: 'settings',
+            element: <SettingsPage />,
           },
         ],
       },

@@ -52,6 +52,8 @@ export const paymentMethodSchema = z
       .preprocess(stringCleaner, z.string().min(1, 'Provider is required')),
     accountNumber: z
       .preprocess(stringCleaner, z.string().min(4, 'Account number is required')),
+    confirmAccountNumber: z
+      .preprocess(stringCleaner, z.string().min(4, 'Please re-enter the account number')),
     cardholderName: z.preprocess(stringCleaner, z.string().optional().nullable()),
     nickname: z.string().optional().nullable(),
     expMonth: optionalNumber(1, 12),
@@ -59,6 +61,11 @@ export const paymentMethodSchema = z
     brand: z.preprocess(stringCleaner, z.string().optional().nullable()),
     securityCode: z
       .preprocess(stringCleaner, z.string().optional().nullable()),
+    routingNumber: z
+      .preprocess(stringCleaner, z.string().optional().nullable()),
+    accountType: z
+      .preprocess(stringCleaner, z.string().optional().nullable()),
+    ownerName: z.preprocess(stringCleaner, z.string().optional().nullable()),
     billingAddress: billingAddressSchema.optional().nullable(),
     useProfileAddress: z.boolean().optional(),
     isDefault: z.boolean().optional(),
@@ -66,6 +73,16 @@ export const paymentMethodSchema = z
   .superRefine((data, ctx) => {
     const sanitizedAccount = data.accountNumber.replace(/\s+/g, '');
     const digitsOnly = sanitizedAccount.replace(/\D/g, '');
+    const confirmDigits = data.confirmAccountNumber.replace(/\s+/g, '').replace(/\D/g, '');
+
+    if (digitsOnly !== confirmDigits) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['confirmAccountNumber'],
+        message: 'Account numbers must match.',
+      });
+    }
+
     if (data.type !== 'BANK_ACCOUNT' && digitsOnly.length < 12) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -123,6 +140,31 @@ export const paymentMethodSchema = z
           message: 'Provide a billing address or use your profile address.',
         });
       }
+    } else {
+      const sanitizedRoutingNumber = data.routingNumber?.replace(/\s+/g, '');
+      if (!sanitizedRoutingNumber || !/^\d{9}$/.test(sanitizedRoutingNumber)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['routingNumber'],
+          message: 'Routing numbers must be nine digits.',
+        });
+      }
+
+      if (!data.accountType || data.accountType.trim().length === 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['accountType'],
+          message: 'Select an account type.',
+        });
+      }
+
+      if (!data.ownerName || data.ownerName.trim().length === 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['ownerName'],
+          message: 'Enter the account owner name.',
+        });
+      }
     }
   });
 
@@ -139,6 +181,9 @@ export const paymentMethodUpdateSchema = z
       .optional(),
     securityCode: z
       .preprocess(stringCleaner, z.string().optional().nullable()),
+    routingNumber: z.preprocess(stringCleaner, z.string().optional().nullable()),
+    accountType: z.preprocess(stringCleaner, z.string().optional().nullable()),
+    ownerName: z.preprocess(stringCleaner, z.string().optional().nullable()),
     billingAddress: billingAddressSchema.optional().nullable(),
     useProfileAddress: z.boolean().optional(),
     isDefault: z.boolean().optional(),
@@ -150,6 +195,33 @@ export const paymentMethodUpdateSchema = z
         code: z.ZodIssueCode.custom,
         path: ['securityCode'],
         message: 'CVV must be 3 or 4 digits.',
+      });
+    }
+
+    if (data.routingNumber) {
+      const sanitizedRoutingNumber = data.routingNumber.replace(/\s+/g, '');
+      if (!/^\d{9}$/.test(sanitizedRoutingNumber)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['routingNumber'],
+          message: 'Routing numbers must be nine digits.',
+        });
+      }
+    }
+
+    if (data.accountType && data.accountType.trim().length === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['accountType'],
+        message: 'Select an account type.',
+      });
+    }
+
+    if (data.ownerName && data.ownerName.trim().length === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['ownerName'],
+        message: 'Enter the account owner name.',
       });
     }
   });
