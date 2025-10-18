@@ -244,36 +244,13 @@ export async function changePassword(userId: string, currentPassword: string, ne
 }
 
 export async function requestPasswordReset(params: {
+  email: string;
   ssnLast4: string;
   dateOfBirth: string;
-  customerNumber?: string;
 }) {
-  const birthDate = new Date(params.dateOfBirth);
+  const user = await prisma.user.findUnique({ where: { email: params.email } });
 
-  if (Number.isNaN(birthDate.getTime())) {
-    const error = new Error('Enter a valid date of birth.');
-    (error as Error & { status?: number }).status = 422;
-    throw error;
-  }
-
-  const startOfDayUtc = new Date(Date.UTC(birthDate.getUTCFullYear(), birthDate.getUTCMonth(), birthDate.getUTCDate()));
-  const endOfDayUtc = new Date(startOfDayUtc);
-  endOfDayUtc.setUTCDate(endOfDayUtc.getUTCDate() + 1);
-
-  const normalizedCustomerNumber = params.customerNumber?.toUpperCase();
-
-  const user = await prisma.user.findFirst({
-    where: {
-      ssnLast4: params.ssnLast4,
-      dateOfBirth: {
-        gte: startOfDayUtc,
-        lt: endOfDayUtc,
-      },
-      ...(normalizedCustomerNumber ? { customerNumber: normalizedCustomerNumber } : {}),
-    },
-  });
-
-  if (!user) {
+  if (!user || user.ssnLast4 !== params.ssnLast4 || user.dateOfBirth.toISOString().split('T')[0] !== params.dateOfBirth) {
     const error = new Error('We could not find a profile that matches those details.');
     (error as Error & { status?: number }).status = 404;
     throw error;

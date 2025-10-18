@@ -56,7 +56,7 @@ export async function changePassword(token: string, payload: { currentPassword: 
   return apiClient.post<{ requiresReauthentication: boolean }>('/auth/change-password', payload, { auth: token });
 }
 
-export async function requestPasswordReset(payload: { ssnLast4: string; dateOfBirth: string; customerNumber?: string }) {
+export async function requestPasswordReset(payload: { email: string; ssnLast4: string; dateOfBirth: string }) {
   return apiClient.post<{ message: string; expiresAt: string; token?: string; email?: string }>('/auth/forgot-password', payload);
 }
 

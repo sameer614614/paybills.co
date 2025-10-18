@@ -57,9 +57,9 @@ export const changePasswordSchema = z
   });
 
 export const passwordResetRequestSchema = z.object({
+  email: z.string().email(),
   ssnLast4: z.string().regex(/^\d{4}$/),
   dateOfBirth: z.string(),
-  customerNumber: z.string().optional(),
 });
 
 export const passwordResetSchema = z

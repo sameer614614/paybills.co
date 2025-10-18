@@ -783,9 +783,14 @@ function PaymentMethodsPanel({ profile }: { profile: Profile | null }) {
                           <label className="flex flex-col text-sm font-medium text-slate-700">
                             Routing number
                             <input
-                              value={editing.routingNumber}
-                              onChange={(event) => handleEditFieldChange('routingNumber', event.target.value)}
-                              placeholder="9 digits"
+                              value={editing.securityCode}
+                              onChange={(event) => handleEditFieldChange('securityCode', event.target.value)}
+                              onFocus={() => {
+                                if (!editing.securityCode) {
+                                  handleEditFieldChange('securityCode', '')
+                                }
+                              }}
+                              placeholder="CVV"
                               className="mt-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20"
                             />
                           </label>
