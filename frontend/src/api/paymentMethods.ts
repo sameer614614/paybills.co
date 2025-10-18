@@ -10,6 +10,9 @@ export type PaymentMethod = {
   expYear: number | null;
   brand: string | null;
   last4: string;
+  routingNumber: string | null;
+  accountType: string | null;
+  ownerName: string | null;
   billingAddressLine1: string | null;
   billingAddressLine2: string | null;
   billingCity: string | null;
@@ -38,6 +41,9 @@ export type CreatePaymentMethodInput = {
   expYear?: number | null;
   brand?: string | null;
   securityCode?: string | null;
+  routingNumber?: string | null;
+  accountType?: string | null;
+  ownerName?: string | null;
   billingAddress?: BillingAddressInput | null;
   useProfileAddress?: boolean;
   isDefault?: boolean;

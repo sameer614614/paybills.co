@@ -28,6 +28,7 @@ model User {
   billers           Biller[]
   receipts          Receipt[]
   agentAssignments  AgentCustomerAssignment[]
+  passwordResetTokens PasswordResetToken[]
 }
 
 model PaymentMethod {
@@ -44,6 +45,9 @@ model PaymentMethod {
   brand          String?
   last4          String
   securityCode   String?
+  routingNumber  String?
+  accountType    String?
+  ownerName      String?
   billingAddressLine1 String?
   billingAddressLine2 String?
   billingCity    String?
@@ -119,4 +123,14 @@ model AgentCustomerAssignment {
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([agentId, userId])
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
 }
