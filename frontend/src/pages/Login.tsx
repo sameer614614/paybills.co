@@ -16,6 +16,7 @@ function LoginPage() {
   const { login, loading, token } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
+  const locationState = location.state as { message?: string } | undefined
   const {
     register,
     handleSubmit,
@@ -51,6 +52,12 @@ function LoginPage() {
         <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-8 shadow-lg">
           <h1 className="text-2xl font-semibold text-slate-900">Welcome back</h1>
           <p className="mt-2 text-sm text-slate-600">Sign in to manage payment methods and review your billers.</p>
+
+          {locationState?.message && (
+            <p className="mt-4 rounded-lg border border-brand/30 bg-brand/10 px-4 py-3 text-sm text-brand">
+              {locationState.message}
+            </p>
+          )}
 
           <form className="mt-8 space-y-5" onSubmit={handleSubmit(onSubmit)}>
             <div className="space-y-2">
@@ -91,6 +98,12 @@ function LoginPage() {
               {loading ? 'Signing in…' : 'Sign in'}
             </button>
           </form>
+
+          <p className="mt-4 text-center text-sm">
+            <Link to="/forgot-password" className="font-semibold text-brand hover:text-brand-dark">
+              Forgot your password?
+            </Link>
+          </p>
 
           <p className="mt-6 text-center text-sm text-slate-600">
             Need an account?{' '}

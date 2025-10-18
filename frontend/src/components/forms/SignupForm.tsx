@@ -91,6 +91,7 @@ export default function SignupForm() {
     register,
     handleSubmit,
     reset,
+    setError,
     formState: { errors, isSubmitting },
   } = useForm<SignupFormValues>({
     resolver: zodResolver(signupSchema),
@@ -121,7 +122,33 @@ export default function SignupForm() {
       reset(defaultValues)
       setTimeout(() => navigate('/dashboard'), 1200)
     } catch (error) {
-      setServerError(error instanceof Error ? error.message : 'Unable to complete enrollment right now.')
+      if (error instanceof Error) {
+        const serverError = error as Error & {
+          details?: { fieldErrors?: Record<string, string[]>; formErrors?: string[] }
+        }
+        if (serverError.details) {
+          const { fieldErrors, formErrors } = serverError.details
+          if (fieldErrors) {
+            Object.entries(fieldErrors).forEach(([field, messages]) => {
+              const message = messages?.[0]
+              if (!message) return
+              const formField = field as keyof SignupFormValues
+              setError(formField, { type: 'server', message })
+            })
+          }
+          if (formErrors?.length) {
+            setServerError(formErrors[0])
+          } else if (fieldErrors && Object.keys(fieldErrors).length > 0) {
+            setServerError('Double-check the highlighted fields before submitting again.')
+          } else {
+            setServerError(serverError.message)
+          }
+          return
+        }
+        setServerError(serverError.message)
+        return
+      }
+      setServerError('Unable to complete enrollment right now.')
     }
   })
 
