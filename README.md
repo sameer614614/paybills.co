@@ -51,10 +51,11 @@ Every package ships with an `.env.example` template – copy it to `.env` (or `.
 ### Running locally
 
 1. Install dependencies in every workspace:
-   * `cd backend && npm install`
-   * `cd ../frontend && npm install`
-   * `cd ../admin && npm install`
-   * `cd ../agent && npm install`
+* `cd backend && npm install`
+* `cd ../functions && npm install`
+* `cd ../frontend && npm install`
+* `cd ../admin && npm install`
+* `cd ../agent && npm install`
 2. In one terminal run the API: `cd backend && npm run dev`.
 3. In another terminal start the public front end: `cd frontend && npm run dev`.
 4. Optionally run the admin and agent panels from separate terminals (`npm run dev` inside `admin/` and `agent/`).
@@ -80,10 +81,11 @@ When you pull new changes onto the GoDaddy VPS, follow this repeatable sequence 
    * `cd ../backend`
    * `npx prisma migrate deploy`
 5. Build the production bundles:
-   * `npm run build` inside `backend/`
-   * `cd ../frontend && npm run build`
-   * `cd ../admin && npm run build`
-   * `cd ../agent && npm run build`
+* `npm run build` inside `backend/`
+* `cd ../functions && npm run build`
+* `cd ../frontend && npm run build`
+* `cd ../admin && npm run build`
+* `cd ../agent && npm run build`
 6. Deploy the `frontend/dist` bundle to the public site and host the `admin/dist` and `agent/dist` bundles behind their secured hostnames or VPN.
 7. Restart the running processes (for example, `pm2 restart billspay-api` and `pm2 restart billspay-frontend`, or restart the systemd services you configured).
 8. Confirm everything is healthy by hitting the API health check (`curl http://YOUR_API_HOST:4000/health`) and by loading the front-end site in a browser. Attempting to hit `/api/admin/health` or `/api/agent/health` from an unapproved host should return HTTP 403.
